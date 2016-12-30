@@ -60,7 +60,7 @@ export class Generator<T> {
    *
    *     var genList = gen.notEmpty(gen.array(gen.int))
    *     var genListAndItem = genList.then(
-   *       list => gen.array([ list, gen.oneOf(list) ])
+   *       list => [ list, gen.oneOf(list) ]
    *     );
    *
    */
@@ -377,21 +377,8 @@ export const gen: {
    *
    *     gen.array(gen.int, { minSize: 2, maxSize: 10 })
    *
-   *  - Generate Arrays of specific lengths with different kinds of values at
-   *    each index (e.g. tuples). (ex. tuples of [int, bool] like `[3, true]`)
-   *
-   *     gen.array([ gen.int, gen.boolean ])
-   *
    */
-  array: {
-    <T>(valueGen: Generator<T>): Generator<Array<T>>;
-    <T>(valueGen: Generator<T>, options?: SizeOptions): Generator<Array<T>>;
-    <T1, T2, T3, T4, T5>(tupleGens: [T1 | Generator<T1>, T2 | Generator<T2>, T3 | Generator<T3>, T4 | Generator<T4>, T5 | Generator<T5>]): Generator<[T1, T2, T3, T4, T5]>;
-    <T1, T2, T3, T4>(tupleGens: [T1 | Generator<T1>, T2 | Generator<T2>, T3 | Generator<T3>, T4 | Generator<T4>]): Generator<[T1, T2, T3, T4]>;
-    <T1, T2, T3>(tupleGens: [T1 | Generator<T1>, T2 | Generator<T2>, T3 | Generator<T3>]): Generator<[T1, T2, T3]>;
-    <T1, T2>(tupleGens: [T1 | Generator<T1>, T2 | Generator<T2>]): Generator<[T1, T2]>;
-    <T1>(tupleGens: [T1 | Generator<T1>]): Generator<[T1]>;
-  };
+  array: <T>(valueGen: Generator<T>, options?: SizeOptions) => Generator<Array<T>>;
 
   /**
    * Generates Arrays of unique values.
@@ -401,7 +388,7 @@ export const gen: {
    * Optionally also accepts a function to determine how to determine if a value
    * is unique. For example, if 2d points are the same:
    *
-   *     var genPoint = gen.array([ gen.int, gen.int ])
+   *     var genPoint = gen.shape([ gen.int, gen.int ])
    *     var genUniquePoints = gen.uniqueArray(genPoint, point => point.join())
    *
    */
@@ -422,16 +409,10 @@ export const gen: {
    *
    *     gen.object(gen.int, gen.int)
    *
-   *  - Generate Objects with specific keys with different kinds of values at
-   *    each key (e.g. records). (ex. a 2d point like `{ x: 3, y: 5 }`)
-   *
-   *     gen.object({ x: gen.posInt, y: gen.posInt })
-   *
    */
   object: {
     <T>(valueGen: Generator<T>, options?: SizeOptions): Generator<{[key: string]: T}>;
     <T>(keyGen: Generator<string>, valueGen: Generator<T>, options?: SizeOptions): Generator<{[key: string]: T}>;
-    (genMap: {[key: string]: Generator<any>}): Generator<{[key: string]: any}>;
   };
 
   /**
@@ -456,6 +437,60 @@ export const gen: {
     collectionGenFn: (valueGen: Generator<T>) => Generator<C>,
     valueGen: Generator<T>
   ) => Generator<C>;
+
+
+  /**
+   * Generates a specific shape of values given an initial nested Array or Object which
+   * contain *Generators*. Any values within the provided shape which don't contain
+   * generators will be *cloned* (with `gen.clone()`).
+   *
+   * Note: Whenever a non-*Generator* is provided to a function which expects a *Generator*,
+   * it is converted to a *Generator* with `gen.shape()`. That makes calling this function
+   * optional for most cases, unless trying to be explicit.
+   *
+   * There are a few forms `gen()` can be used:
+   *
+   * - Generate an Array shape with different values at each index (also known as "tuples")
+   *
+   *   For example, a tuples of [ "constant", *int*, *bool* ] like `['foo', 3, true]`:
+   *
+   *   ```js
+   *   gen.shape([ 'foo', gen.int, gen.boolean ])
+   *   ```
+   *
+   * - Generate an Object shape with different values for each key (also known as "records")
+   *
+   *   For example, a record of { x: "constant", y: *int*, z: *bool* } like `{ x: 'foo', y: -4, z: false }`:
+   *
+   *   ```js
+   *   gen.shape({ x: 'foo', y: gen.int, z: gen.boolean })
+   *   ```
+   *
+   * - Combinations of Array and Object shapes with generators at any point:
+   *
+   *   For example, a data shape for a complex "place" data shape might look like:
+   *
+   *   ```js
+   *   gen.shape({
+   *     type: 'Place',
+   *     name: gen.string,
+   *     location: [ gen.number, gen.number ],
+   *     address: {
+   *       street: gen.string,
+   *       city: gen.string
+   *     }
+   *   })
+   *   ```
+   */
+  shape: {
+    // Note: this only models one layer deep shapes, not recursive shapes, and does not model records.
+    <T1, T2, T3, T4, T5>(tupleGens: [T1 | Generator<T1>, T2 | Generator<T2>, T3 | Generator<T3>, T4 | Generator<T4>, T5 | Generator<T5>]): Generator<[T1, T2, T3, T4, T5]>;
+    <T1, T2, T3, T4>(tupleGens: [T1 | Generator<T1>, T2 | Generator<T2>, T3 | Generator<T3>, T4 | Generator<T4>]): Generator<[T1, T2, T3, T4]>;
+    <T1, T2, T3>(tupleGens: [T1 | Generator<T1>, T2 | Generator<T2>, T3 | Generator<T3>]): Generator<[T1, T2, T3]>;
+    <T1, T2>(tupleGens: [T1 | Generator<T1>, T2 | Generator<T2>]): Generator<[T1, T2]>;
+    <T1>(tupleGens: [T1 | Generator<T1>]): Generator<[T1]>;
+    (genMap: {[key: string]: Generator<any>}): Generator<{[key: string]: any}>;
+  };
 
 
   // JSON
@@ -500,7 +535,15 @@ export const gen: {
   ) => Generator<T>;
 
   /**
-   * Creates a Generator which will always generate the provided value.
+   * Creates a Generator which will always generate clones of the provided value.
+   *
+   *     var threeThings = gen.clone([1,2,3]);
+   *
+   */
+  clone: <T>(value: T) => Generator<T>;
+
+  /**
+   * Creates a Generator which will always generate references of the provided value.
    *
    *     var alwaysBlue = gen.return('blue');
    *
