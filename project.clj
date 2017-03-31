@@ -1,11 +1,11 @@
-(defproject doublecheck-js "0.0.0"
+(defproject testcheck-js "0.0.0"
   :description "Property Tests for JavaScript"
 
   :source-paths ["src"]
 
   :dependencies [
     [org.clojure/clojure "1.8.0"]
-    [org.clojure/clojurescript "1.9.293"]
+    [org.clojure/clojurescript "1.9.495"]
     [org.clojure/test.check "0.9.0"]]
 
   :plugins [
